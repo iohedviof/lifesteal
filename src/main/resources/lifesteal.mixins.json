@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.lifesteal.lifesteal.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BrewingRecipeRegistryMixin",
+    "ApplyEffectsConsumeEffectMixin",
+    "LivingEntityStrengthClampMixin",
+    "ItemStackEnchantmentClampMixin",
+    "PlayerEntityMaceCooldownMixin",
+    "ServerPlayerEntityMaceCooldownMixin",
+    "SmithingTransformRecipeMixin",
+    "SmithingRecipeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "lifesteal:heart",
+  "pattern": [
+    "SNS",
+    "NWN",
+    "SNS"
+  ],
+  "key": {
+    "S": "minecraft:nautilus_shell",
+    "N": "minecraft:netherite_ingot",
+    "W": "minecraft:wither_skeleton_skull"
+  },
+  "result": {
+    "id": "lifesteal:heart",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "lifesteal_heart_type": "crafted"
+      }
+    }
+  }
+}

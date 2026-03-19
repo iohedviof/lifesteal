@@ -1,0 +1,14 @@
+{
+  "item.lifesteal.heart": "Heart",
+  "item.lifesteal.beacon_of_life": "Beacon of Life",
+  "message.lifesteal.heart_used": "You gained 1 heart.",
+  "message.lifesteal.heart_stolen": "You stole 1 heart.",
+  "message.lifesteal.banned": "You ran out of hearts.",
+  "message.lifesteal.player_revived": "Revived %s",
+  "message.lifesteal.revive_failed": "Could not revive %s (profile not found).",
+  "message.lifesteal.crafted_limit": "You cannot consume crafted hearts at 7+ hearts.",
+  "message.lifesteal.withdraw_success": "Withdrew %s heart(s).",
+  "message.lifesteal.withdraw_failed": "You do not have enough hearts to withdraw.",
+  "message.lifesteal.admin_add_success": "Added %s heart(s) to %s player(s).",
+  "message.lifesteal.admin_remove_success": "Removed %s heart(s) from %s player(s)."
+}

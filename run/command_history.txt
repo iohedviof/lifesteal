@@ -1,0 +1,50 @@
+/kill Test
+/player Test spawn
+/effect give @s minecraft:strength infinite 2
+/withdraw 1
+/player Test spawn
+/remove Test 100
+/give @s lifesteal:beacon_of_life
+/player Test spawn
+/remove Test 10
+/player Test spawn
+/remove Test 10
+/player Test spawn
+/remove Test 10
+/enchant @s minecraft:protection 4
+/effect clear
+/time set day
+/gamerule doDaylightCycle false
+/lifesteal reload
+/withdraw 6
+/add @s 1000
+/add @s 10
+/player Test spawn
+/remove Test 100
+/give @s lifesteal:heart
+/remove @s 19
+/spawnpoint
+/kill
+/give @s netherite_ingot 64
+/give @s mace
+/lifesteal reload
+/summon minecraft:mannequin
+/enchant @s minecraft:aqua_affinity
+/enchant @s minecraft:density 5
+/summon minecraft:mannequin
+/enchant @s minecraft:density 5
+/summon minecraft:mannequin
+/lifesteal allowGodApples
+/lifesteal allowGodApples true
+/lifesteal allowGodApples false
+/lifesteal enableEnchantmentLimits
+/lifesteal allowNetheriteUpgrades
+/lifesteal allowNetheriteUpgrades false
+/playsound minecraft:block.respawn_anchor.charge ambient
+/give @s lifesteal:heart
+/withdraw 1
+/lifesteal allowGodApples
+/lifesteal allowNetheriteUpgrades
+/lifesteal allowNetheriteUpgrades true
+/lifesteal allowNetheriteUpgrades
+/withdraw 2

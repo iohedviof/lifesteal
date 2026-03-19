@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "lifesteal:beacon_of_life",
+  "pattern": [
+    "HEH",
+    "RHC",
+    "HGH"
+  ],
+  "key": {
+    "H": "lifesteal:heart",
+    "E": "minecraft:elytra",
+    "R": "minecraft:recovery_compass",
+    "C": "minecraft:conduit",
+    "G": "minecraft:enchanted_golden_apple"
+  },
+  "result": {
+    "id": "lifesteal:beacon_of_life",
+    "count": 1
+  }
+}

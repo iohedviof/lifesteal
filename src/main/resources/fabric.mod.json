@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "lifesteal",
+  "version": "${version}",
+  "name": "Lifesteal Mod",
+  "description": "An attempt at recreating official Lifesteal Mod",
+  "contributors": [
+    "Hyper"
+  ],
+  "authors": [
+    "Alex"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/lifesteal-alex"
+  },
+  "license": "MIT",
+  "icon": "assets/lifesteal/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "dev.lifesteal.lifesteal.client.LifestealDataGenerator"
+    ],
+    "client": [
+      "dev.lifesteal.lifesteal.client.LifestealClient"
+    ],
+    "main": [
+      "dev.lifesteal.lifesteal.Lifesteal"
+    ]
+  },
+  "mixins": [
+    "lifesteal.mixins.json",
+    {
+      "config": "lifesteal.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
