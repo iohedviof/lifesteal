@@ -1,19 +1,3 @@
-/kill Test
-/player Test spawn
-/effect give @s minecraft:strength infinite 2
-/withdraw 1
-/player Test spawn
-/remove Test 100
-/give @s lifesteal:beacon_of_life
-/player Test spawn
-/remove Test 10
-/player Test spawn
-/remove Test 10
-/player Test spawn
-/remove Test 10
-/enchant @s minecraft:protection 4
-/effect clear
-/time set day
 /gamerule doDaylightCycle false
 /lifesteal reload
 /withdraw 6
@@ -48,3 +32,19 @@
 /lifesteal allowNetheriteUpgrades true
 /lifesteal allowNetheriteUpgrades
 /withdraw 2
+/give @s lifesteal:beacon_of_life
+/player Test spawn
+/remove test 10000
+/revive Test
+/player Test spawn
+/lifesteal disableEnderPearls true
+/give @s ender_pearl
+/withdraw 1
+/player Test spawn
+/remove test 10000
+/revive Test
+/lifesteal maxHearts
+/lifesteal disableEnderPearls
+/lifesteal allowGodApples
+/lifesteal allowStrengthII
+/carpet allowListingFakePlayers

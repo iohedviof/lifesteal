@@ -6,6 +6,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +21,11 @@ public final class LifestealConfig {
     public boolean enableEnchantmentLimits = false;
     public boolean allowNetheriteUpgrades = true;
     public boolean balancedMace = false;
+    public boolean disableEnderPearls = false;
+    public boolean disableCrystalDamage = true;
+    public boolean enableRiptideCooldown = false;
+    public int maxHearts = 20;
+    public int riptideCooldown = 200;
 
     private static LifestealConfig INSTANCE = new LifestealConfig();
 
@@ -58,10 +65,17 @@ public final class LifestealConfig {
                 config.enableEnchantmentLimits = getBoolean(lines, "enableEnchantmentLimits", config.enableEnchantmentLimits);
                 config.allowNetheriteUpgrades = getBoolean(lines, "allowNetheriteUpgrades", config.allowNetheriteUpgrades);
                 config.balancedMace = getBoolean(lines, "balancedMace", config.balancedMace);
+                config.disableEnderPearls = getBoolean(lines, "disableEnderPearls", config.disableEnderPearls);
+                config.disableCrystalDamage = getBoolean(lines, "disableCrystalDamage", config.disableCrystalDamage);
+                config.enableRiptideCooldown = getBoolean(lines, "enableRiptideCooldown", config.enableRiptideCooldown);
+                config.maxHearts = getInt(lines, "maxHearts", config.maxHearts);
+                config.riptideCooldown = getInt(lines, "riptideCooldown", config.riptideCooldown);
             }
         } catch (Exception ignored) {
         }
 
+        config.maxHearts = Math.max(1, Math.min(1000, config.maxHearts));
+        config.riptideCooldown = Math.max(0, Math.min(72000, config.riptideCooldown));
         INSTANCE = config;
         save();
         return INSTANCE;
@@ -71,7 +85,7 @@ public final class LifestealConfig {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
             String contents = """
-Lifesteal Mod configuration.
+# Lifesteal Mod configuration.
 
 # If enabled, enchanted golden apples do not give you any effects.
 allowGodApples: %s
@@ -94,12 +108,32 @@ allowNetheriteUpgrades: %s
 
 # If set to true, maces cannot be enchanted and have a 60-second attack cooldown (shown like ender pearls).
 balancedMace = %s
+
+# Disables usage of ender pearls if enabled. Set to false be default
+disableEnderPearls: %s
+
+# Makes crystals be unable to do any environment and player damage
+disableCrystalDamage: %s
+
+# Enables cooldown for Riptide tridents
+enableRiptideCooldown: %s
+
+# Maximum amount of hearts. Defaults to 20
+maxHearts: %s
+
+# Cooldown for Riptide enchantment
+riptideCooldown: %s
 """.formatted(
                     INSTANCE.allowGodApples,
                     INSTANCE.allowStrengthII,
                     INSTANCE.enableEnchantmentLimits,
                     INSTANCE.allowNetheriteUpgrades,
-                    INSTANCE.balancedMace
+                    INSTANCE.balancedMace,
+                    INSTANCE.disableEnderPearls,
+                    INSTANCE.disableCrystalDamage,
+                    INSTANCE.enableRiptideCooldown,
+                    INSTANCE.maxHearts,
+                    INSTANCE.riptideCooldown
             );
             Files.writeString(CONFIG_PATH, contents);
         } catch (Exception ignored) {
@@ -107,6 +141,26 @@ balancedMace = %s
     }
 
     private static boolean getBoolean(List<String> lines, String key, boolean defaultValue) {
+        String value = getRawValue(lines, key);
+        if (value == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    private static int getInt(List<String> lines, String key, int defaultValue) {
+        String value = getRawValue(lines, key);
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    private static String getRawValue(List<String> lines, String key) {
         for (String line : lines) {
             String trimmed = line.trim();
             if (trimmed.isEmpty() || trimmed.startsWith("#")) {
@@ -123,10 +177,9 @@ balancedMace = %s
             if (!foundKey.equals(key)) {
                 continue;
             }
-            String value = trimmed.substring(separatorIndex + 1).trim();
-            return Boolean.parseBoolean(value);
+            return trimmed.substring(separatorIndex + 1).trim();
         }
-        return defaultValue;
+        return null;
     }
 
     private static void migrateFromJson(Path legacyJsonPath, LifestealConfig config) {
@@ -137,6 +190,11 @@ balancedMace = %s
             config.enableEnchantmentLimits = extractBoolean(json, "enableEnchantmentLimits", config.enableEnchantmentLimits);
             config.allowNetheriteUpgrades = extractBoolean(json, "allowNetheriteUpgrades", config.allowNetheriteUpgrades);
             config.balancedMace = extractBoolean(json, "balancedMace", config.balancedMace);
+            config.disableEnderPearls = extractBoolean(json, "disableEnderPearls", config.disableEnderPearls);
+            config.disableCrystalDamage = extractBoolean(json, "disableCrystalDamage", config.disableCrystalDamage);
+            config.enableRiptideCooldown = extractBoolean(json, "enableRiptideCooldown", config.enableRiptideCooldown);
+            config.maxHearts = extractInt(json, "maxHearts", config.maxHearts);
+            config.riptideCooldown = extractInt(json, "riptideCooldown", config.riptideCooldown);
             Files.deleteIfExists(legacyJsonPath);
         } catch (Exception ignored) {
         }
@@ -151,27 +209,122 @@ balancedMace = %s
         return Boolean.parseBoolean(matcher.group(1));
     }
 
+    private static int extractInt(String json, String key, int fallback) {
+        Pattern pattern = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(-?\\d+)", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(json);
+        if (!matcher.find()) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
     public static final class ConfigOption {
+        public enum Type {
+            BOOLEAN,
+            INTEGER
+        }
+
         public final String key;
         public final String description;
-        public final boolean defaultValue;
-        private final BooleanSupplier getter;
-        private final Consumer<Boolean> setter;
+        public final Type type;
+        private final boolean defaultBooleanValue;
+        private final int defaultIntegerValue;
+        private final BooleanSupplier booleanGetter;
+        private final Consumer<Boolean> booleanSetter;
+        private final IntSupplier integerGetter;
+        private final IntConsumer integerSetter;
+        private final int minInteger;
+        private final int maxInteger;
 
         private ConfigOption(String key, String description, boolean defaultValue, BooleanSupplier getter, Consumer<Boolean> setter) {
             this.key = key;
             this.description = description;
-            this.defaultValue = defaultValue;
-            this.getter = getter;
-            this.setter = setter;
+            this.type = Type.BOOLEAN;
+            this.defaultBooleanValue = defaultValue;
+            this.defaultIntegerValue = 0;
+            this.booleanGetter = getter;
+            this.booleanSetter = setter;
+            this.integerGetter = null;
+            this.integerSetter = null;
+            this.minInteger = 0;
+            this.maxInteger = 0;
         }
 
-        public boolean currentValue() {
-            return getter.getAsBoolean();
+        private ConfigOption(String key, String description, int defaultValue, int minValue, int maxValue, IntSupplier getter, IntConsumer setter) {
+            this.key = key;
+            this.description = description;
+            this.type = Type.INTEGER;
+            this.defaultBooleanValue = false;
+            this.defaultIntegerValue = defaultValue;
+            this.booleanGetter = null;
+            this.booleanSetter = null;
+            this.integerGetter = getter;
+            this.integerSetter = setter;
+            this.minInteger = minValue;
+            this.maxInteger = maxValue;
         }
 
-        public void setValue(boolean value) {
-            setter.accept(value);
+        public boolean currentBooleanValue() {
+            return booleanGetter != null && booleanGetter.getAsBoolean();
+        }
+
+        public int currentIntegerValue() {
+            return integerGetter != null ? integerGetter.getAsInt() : 0;
+        }
+
+        public boolean defaultBooleanValue() {
+            return defaultBooleanValue;
+        }
+
+        public int defaultIntegerValue() {
+            return defaultIntegerValue;
+        }
+
+        public int minInteger() {
+            return minInteger;
+        }
+
+        public int maxInteger() {
+            return maxInteger;
+        }
+
+        public String currentValueAsText() {
+            return type == Type.BOOLEAN
+                    ? Boolean.toString(currentBooleanValue())
+                    : Integer.toString(currentIntegerValue());
+        }
+
+        public boolean isDefaultValue() {
+            if (type == Type.BOOLEAN) {
+                return currentBooleanValue() == defaultBooleanValue;
+            }
+            return currentIntegerValue() == defaultIntegerValue;
+        }
+
+        public void setValueFromString(String value) {
+            if (type == Type.BOOLEAN) {
+                if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) {
+                    throw new IllegalArgumentException("Expected true or false.");
+                }
+                booleanSetter.accept(Boolean.parseBoolean(value));
+                return;
+            }
+
+            int parsed;
+            try {
+                parsed = Integer.parseInt(value);
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Expected a number.");
+            }
+
+            if (parsed < minInteger || parsed > maxInteger) {
+                throw new IllegalArgumentException("Value must be between " + minInteger + " and " + maxInteger + ".");
+            }
+            integerSetter.accept(parsed);
         }
     }
 
@@ -210,6 +363,45 @@ balancedMace = %s
                     DEFAULTS.balancedMace,
                     () -> LifestealConfig.get().balancedMace,
                     value -> LifestealConfig.get().balancedMace = value
+            ),
+            new ConfigOption(
+                    "disableEnderPearls",
+                    "Disables ender pearls from being used",
+                    DEFAULTS.disableEnderPearls,
+                    () -> LifestealConfig.get().disableEnderPearls,
+                    value -> LifestealConfig.get().disableEnderPearls = value
+            ),
+            new ConfigOption(
+                    "disableCrystalDamage",
+                    "Makes crystals be unable to do any environment and player damage",
+                    DEFAULTS.disableCrystalDamage,
+                    () -> LifestealConfig.get().disableCrystalDamage,
+                    value -> LifestealConfig.get().disableCrystalDamage = value
+            ),
+            new ConfigOption(
+                    "enableRiptideCooldown",
+                    "Enables cooldown for Riptide tridents",
+                    DEFAULTS.enableRiptideCooldown,
+                    () -> LifestealConfig.get().enableRiptideCooldown,
+                    value -> LifestealConfig.get().enableRiptideCooldown = value
+            ),
+            new ConfigOption(
+                    "maxHearts",
+                    "The max amount of hearts, default being 20",
+                    DEFAULTS.maxHearts,
+                    1,
+                    1000,
+                    () -> LifestealConfig.get().maxHearts,
+                    value -> LifestealConfig.get().maxHearts = value
+            ),
+            new ConfigOption(
+                    "riptideCooldown",
+                    "Cooldown for Riptide enchantment",
+                    DEFAULTS.riptideCooldown,
+                    0,
+                    72000,
+                    () -> LifestealConfig.get().riptideCooldown,
+                    value -> LifestealConfig.get().riptideCooldown = value
             )
     );
 }

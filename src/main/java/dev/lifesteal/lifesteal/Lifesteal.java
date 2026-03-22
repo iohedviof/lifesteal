@@ -60,8 +60,6 @@ import java.nio.file.Paths;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
-import static com.mojang.brigadier.arguments.BoolArgumentType.bool;
-import static com.mojang.brigadier.arguments.BoolArgumentType.getBool;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 
@@ -71,7 +69,6 @@ public class Lifesteal implements ModInitializer {
     public static final double DEFAULT_MAX_HEALTH = 20.0D;
     public static final double MIN_MAX_HEALTH = 2.0D;
     public static final double HEALTH_DELTA = 2.0D;
-    public static final double MAX_GENERAL_HEALTH = 40.0D;
     public static final double MAX_CRAFTED_HEART_HEALTH = 20.0D;
     public static final int MAX_WITHDRAW_PER_COMMAND = 10;
     public static final String HEART_TYPE_KEY = "lifesteal_heart_type";
@@ -93,7 +90,6 @@ public class Lifesteal implements ModInitializer {
             new HeartItem(
                     new Item.Settings()
                             .registryKey(RegistryKey.of(RegistryKeys.ITEM, Identifier.of(MOD_ID, "heart")))
-                            .component(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true)
                             .component(DataComponentTypes.CUSTOM_NAME, Text.translatable("item.lifesteal.heart").styled(style ->
                                     style.withColor(Formatting.RED).withItalic(false)
                             ))
@@ -101,7 +97,7 @@ public class Lifesteal implements ModInitializer {
                                     Text.literal("Use to gain an extra heart").styled(style ->
                                             style.withColor(Formatting.WHITE).withItalic(false)
                                     ),
-                                    Text.literal("Maximum of 20 hearts").styled(style ->
+                                    Text.literal("Maximum hearts set by config").styled(style ->
                                             style.withColor(Formatting.WHITE).withItalic(false)
                                     )
                             )))
@@ -164,6 +160,20 @@ public class Lifesteal implements ModInitializer {
             );
 
             dispatcher.register(
+                    literal("revive")
+                            .requires(source -> source.hasPermissionLevel(4))
+                            .then(argument("player", word())
+                                    .suggests((context, builder) -> CommandSource.suggestMatching(
+                                            Lifesteal.getBannedProfiles(context.getSource().getServer()),
+                                            builder
+                                    ))
+                                    .executes(context -> executeRevive(
+                                            context.getSource(),
+                                            getString(context, "player")
+                                    )))
+            );
+
+            dispatcher.register(
                     literal("testmode")
                             .requires(source -> source.hasPermissionLevel(4))
                             .then(literal("on").executes(context -> executeTestModeOn(context.getSource())))
@@ -198,11 +208,11 @@ public class Lifesteal implements ModInitializer {
                                             context.getSource(),
                                             getString(context, "setting")
                                     ))
-                                    .then(argument("value", bool())
+                                    .then(argument("value", word())
                                             .executes(context -> executeSetConfigOption(
                                                     context.getSource(),
                                                     getString(context, "setting"),
-                                                    getBool(context, "value")
+                                                    getString(context, "value")
                                             ))))
             );
         });
@@ -221,6 +231,8 @@ public class Lifesteal implements ModInitializer {
             double maxHealth = getPlayerMaxHealth(handler.player);
             if (maxHealth < MIN_MAX_HEALTH) {
                 setPlayerMaxHealth(handler.player, DEFAULT_MAX_HEALTH);
+            } else {
+                setPlayerMaxHealth(handler.player, maxHealth);
             }
         });
 
@@ -253,8 +265,8 @@ public class Lifesteal implements ModInitializer {
 
             if (killedByPlayer) {
                 ServerPlayerEntity killer = (ServerPlayerEntity) source.getAttacker();
-                if (getPlayerMaxHealth(killer) < MAX_GENERAL_HEALTH) {
-                    double next = Math.min(getPlayerMaxHealth(killer) + HEALTH_DELTA, MAX_GENERAL_HEALTH);
+                if (getPlayerMaxHealth(killer) < getConfiguredMaxHealth()) {
+                    double next = Math.min(getPlayerMaxHealth(killer) + HEALTH_DELTA, getConfiguredMaxHealth());
                     setPlayerMaxHealth(killer, next);
                 }
             } else {
@@ -280,11 +292,11 @@ public class Lifesteal implements ModInitializer {
             return false;
         }
 
-        if (getPlayerMaxHealth(player) >= MAX_GENERAL_HEALTH) {
+        if (getPlayerMaxHealth(player) >= getConfiguredMaxHealth()) {
             return false;
         }
 
-        double next = Math.min(getPlayerMaxHealth(player) + HEALTH_DELTA, MAX_GENERAL_HEALTH);
+        double next = Math.min(getPlayerMaxHealth(player) + HEALTH_DELTA, getConfiguredMaxHealth());
         setPlayerMaxHealth(player, next);
         player.getEntityWorld().playSound(
                 null,
@@ -359,7 +371,7 @@ public class Lifesteal implements ModInitializer {
             return;
         }
 
-        double clamped = Math.max(MIN_MAX_HEALTH, Math.min(MAX_GENERAL_HEALTH, maxHealth));
+        double clamped = Math.max(MIN_MAX_HEALTH, Math.min(getConfiguredMaxHealth(), maxHealth));
         attribute.setBaseValue(clamped);
 
         if (player.getHealth() > clamped) {
@@ -503,8 +515,39 @@ public class Lifesteal implements ModInitializer {
 
     private static int executeReload(ServerCommandSource source) {
         LifestealConfig.load();
+        clampOnlinePlayersToConfiguredMax(source.getServer());
         enchantmentClampCooldown = 0;
         source.sendFeedback(() -> Text.literal("Lifesteal config reloaded."), true);
+        return 1;
+    }
+
+    private static int executeRevive(ServerCommandSource source, String playerName) {
+        Optional<com.mojang.authlib.GameProfile> profile = source.getServer().getApiServices().profileResolver().getProfileByName(playerName);
+        if (profile.isEmpty()) {
+            source.sendError(Text.translatable("message.lifesteal.revive_failed", playerName));
+            return 0;
+        }
+
+        PlayerConfigEntry configEntry = new PlayerConfigEntry(profile.get());
+        var banEntry = source.getServer().getPlayerManager().getUserBanList().get(configEntry);
+        if (banEntry == null || !ELIMINATION_BAN_REASON.equals(banEntry.getReason())) {
+            source.sendError(Text.translatable("message.lifesteal.revive_failed", playerName));
+            return 0;
+        }
+
+        source.getServer().getPlayerManager().getUserBanList().remove(configEntry);
+        PENDING_REVIVED_PLAYERS.add(profile.get().id());
+
+        ServerPlayerEntity onlineTarget = source.getServer().getPlayerManager().getPlayer(profile.get().id());
+        if (onlineTarget != null) {
+            setPlayerMaxHealth(onlineTarget, REVIVED_MAX_HEALTH);
+            PENDING_REVIVED_PLAYERS.remove(profile.get().id());
+        }
+
+        source.getServer().getPlayerManager().broadcast(
+                Text.literal(playerName + " was revived").formatted(Formatting.GREEN),
+                false
+        );
         return 1;
     }
 
@@ -518,44 +561,57 @@ public class Lifesteal implements ModInitializer {
         source.sendFeedback(() -> Text.literal(option.key).formatted(Formatting.WHITE, Formatting.BOLD), false);
         source.sendFeedback(() -> Text.literal(option.description), false);
 
-        boolean currentValueBool = option.currentValue();
-        boolean isDefaultValue = currentValueBool == option.defaultValue;
-        Text currentValue = Text.literal((currentValueBool ? "true" : "false")
-                        + (isDefaultValue ? " (default value)" : " (modified value)"))
-                .formatted(currentValueBool ? Formatting.GREEN : Formatting.RED, Formatting.BOLD);
+        boolean isDefaultValue = option.isDefaultValue();
+        String valueText = option.currentValueAsText();
+        Text currentValue = Text.literal(valueText + (isDefaultValue ? " (default value)" : " (modified value)"))
+                .formatted(Formatting.BOLD);
         source.sendFeedback(() -> Text.literal("current value: ").append(currentValue), false);
 
-        Text options = Text.literal("Options: ")
-                .append(Text.literal("[ ").formatted(Formatting.YELLOW))
-                .append(buildOptionToggle(option, true, isDefaultValue))
-                .append(Text.literal("  "))
-                .append(buildOptionToggle(option, false, isDefaultValue))
-                .append(Text.literal(" ]").formatted(Formatting.YELLOW));
-        source.sendFeedback(() -> options, false);
+        if (option.type == LifestealConfig.ConfigOption.Type.BOOLEAN) {
+            Text options = Text.literal("Options: ")
+                    .append(Text.literal("[ ").formatted(Formatting.YELLOW))
+                    .append(buildOptionToggle(option, true, isDefaultValue))
+                    .append(Text.literal("  "))
+                    .append(buildOptionToggle(option, false, isDefaultValue))
+                    .append(Text.literal(" ]").formatted(Formatting.YELLOW));
+            source.sendFeedback(() -> options, false);
+        } else {
+            source.sendFeedback(
+                    () -> Text.literal("Set with: /lifesteal " + option.key + " <" + option.minInteger() + "-" + option.maxInteger() + ">"),
+                    false
+            );
+        }
         return 1;
     }
 
-    private static int executeSetConfigOption(ServerCommandSource source, String key, boolean value) {
+    private static int executeSetConfigOption(ServerCommandSource source, String key, String value) {
         LifestealConfig.ConfigOption option = LifestealConfig.getOption(key);
         if (option == null) {
             source.sendError(Text.literal("Unknown Lifesteal config option: " + key));
             return 0;
         }
 
-        option.setValue(value);
+        try {
+            option.setValueFromString(value);
+        } catch (IllegalArgumentException exception) {
+            source.sendError(Text.literal(exception.getMessage()));
+            return 0;
+        }
         LifestealConfig.save();
         if ("enableEnchantmentLimits".equalsIgnoreCase(option.key)) {
             enchantmentClampCooldown = 0;
         }
+        if ("maxHearts".equalsIgnoreCase(option.key)) {
+            clampOnlinePlayersToConfiguredMax(source.getServer());
+        }
 
-        Text newValue = Text.literal(value ? "true" : "false")
-                .formatted(value ? Formatting.GREEN : Formatting.RED);
+        Text newValue = Text.literal(option.currentValueAsText()).formatted(Formatting.GREEN);
         source.sendFeedback(() -> Text.literal(option.key + " set to ").append(newValue), true);
         return 1;
     }
 
     private static Text buildOptionToggle(LifestealConfig.ConfigOption option, boolean value, boolean isCurrentValueDefault) {
-        boolean isSelected = option.currentValue() == value;
+        boolean isSelected = option.currentBooleanValue() == value;
         Formatting optionColor = isCurrentValueDefault ? Formatting.WHITE : Formatting.GREEN;
         Text choice = Text.literal(value ? "true" : "false")
                 .formatted(optionColor)
@@ -583,6 +639,16 @@ public class Lifesteal implements ModInitializer {
             }
 
             player.networkHandler.disconnect(Text.literal(TEST_MODE_KICK_MESSAGE));
+        }
+    }
+
+    private static double getConfiguredMaxHealth() {
+        return Math.max(MIN_MAX_HEALTH, LifestealConfig.get().maxHearts * HEALTH_DELTA);
+    }
+
+    private static void clampOnlinePlayersToConfiguredMax(MinecraftServer server) {
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            setPlayerMaxHealth(player, getPlayerMaxHealth(player));
         }
     }
 

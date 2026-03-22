@@ -51,6 +51,7 @@ dependencies {
 
     // Dev-only runtime mod (not required for builds or consumers)
     modRuntimeOnly "curse.maven:carpet-349239:7113642"
+    modImplementation "curse.maven:modmenu-308702:7444262"
 }
 
 processResources {

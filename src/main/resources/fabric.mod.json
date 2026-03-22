@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "lifesteal",
   "version": "${version}",
-  "name": "Lifesteal Mod",
+  "name": "Re-Creation of Lifesteal SMP Mod",
   "description": "An attempt at recreating official Lifesteal Mod",
   "contributors": [
     "Hyper"
@@ -11,7 +11,8 @@
     "Alex"
   ],
   "contact": {
-    "homepage": "https://modrinth.com/mod/lifesteal-alex"
+    "sources": "https://github.com/iohedviof/Title-Changer",
+    "issues": "https://github.com/iohedviof/Title-Changer/issues"
   },
   "license": "MIT",
   "icon": "assets/lifesteal/icon.png",
