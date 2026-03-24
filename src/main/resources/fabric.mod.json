@@ -11,8 +11,9 @@
     "Alex"
   ],
   "contact": {
-    "sources": "https://github.com/iohedviof/Title-Changer",
-    "issues": "https://github.com/iohedviof/Title-Changer/issues"
+    "homepage": "https://github.com/iohedviof/lifesteal",
+    "sources": "https://github.com/iohedviof/lifesteal",
+    "issues": "https://github.com/iohedviof/lifesteal/issues"
   },
   "license": "MIT",
   "icon": "assets/lifesteal/icon.png",
