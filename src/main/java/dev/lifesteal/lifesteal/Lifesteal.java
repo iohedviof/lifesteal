@@ -7,10 +7,12 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.lifesteal.lifesteal.item.BeaconOfLifeItem;
 import dev.lifesteal.lifesteal.item.HeartItem;
+import dev.lifesteal.lifesteal.config.LifestealClientConfig;
 import dev.lifesteal.lifesteal.config.LifestealConfig;
 import dev.lifesteal.lifesteal.enchant.EnchantmentLimiter;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
@@ -124,6 +126,11 @@ public class Lifesteal implements ModInitializer {
     public void onInitialize() {
         LifestealConfig.load();
         loadTestModeConfig();
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            if (!server.isDedicated()) {
+                LifestealConfig.applySingleplayerOverrides(LifestealClientConfig.load());
+            }
+        });
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> entries.add(HEART));
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.FUNCTIONAL).register(entries -> entries.add(BEACON_OF_LIFE));
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -519,7 +526,11 @@ public class Lifesteal implements ModInitializer {
     }
 
     private static int executeReload(ServerCommandSource source) {
-        LifestealConfig.load();
+        if (source.getServer().isDedicated()) {
+            LifestealConfig.load();
+        } else {
+            LifestealConfig.applySingleplayerOverrides(LifestealClientConfig.load());
+        }
         clampOnlinePlayersToConfiguredMax(source.getServer());
         enchantmentClampCooldown = 0;
         source.sendFeedback(() -> Text.literal("Lifesteal config reloaded."), true);

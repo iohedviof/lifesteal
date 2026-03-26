@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "lifesteal",
   "version": "${version}",
-  "name": "Re-Creation of Lifesteal SMP Mod",
-  "description": "An attempt at recreating official Lifesteal Mod",
+  "name": "Lifesteal",
+  "description": "An attempt at recreating official Lifesteal Mod with some of my own additions",
   "contributors": [
     "Hyper"
   ],
@@ -24,6 +24,9 @@
     ],
     "client": [
       "dev.lifesteal.lifesteal.client.LifestealClient"
+    ],
+    "modmenu": [
+      "dev.lifesteal.lifesteal.client.config.LifestealModMenuIntegration"
     ],
     "main": [
       "dev.lifesteal.lifesteal.Lifesteal"

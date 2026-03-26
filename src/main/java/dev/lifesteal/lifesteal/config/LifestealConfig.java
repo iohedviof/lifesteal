@@ -74,11 +74,17 @@ public final class LifestealConfig {
         } catch (Exception ignored) {
         }
 
-        config.maxHearts = Math.max(1, Math.min(1000, config.maxHearts));
-        config.riptideCooldown = Math.max(0, Math.min(72000, config.riptideCooldown));
+        clamp(config);
         INSTANCE = config;
         save();
         return INSTANCE;
+    }
+
+    public static void applySingleplayerOverrides(LifestealClientConfig clientConfig) {
+        LifestealConfig config = new LifestealConfig();
+        clientConfig.applyTo(config);
+        clamp(config);
+        INSTANCE = config;
     }
 
     public static void save() {
@@ -220,6 +226,11 @@ riptideCooldown: %s
         } catch (NumberFormatException ignored) {
             return fallback;
         }
+    }
+
+    private static void clamp(LifestealConfig config) {
+        config.maxHearts = Math.max(1, Math.min(1000, config.maxHearts));
+        config.riptideCooldown = Math.max(0, Math.min(72000, config.riptideCooldown));
     }
 
     public static final class ConfigOption {

@@ -39,6 +39,10 @@ repositories {
             includeGroup "curse.maven"
         }
     }
+    maven {
+        url "https://maven.shedaniel.me/"
+    }
+    mavenCentral()
 }
 
 dependencies {
@@ -52,6 +56,11 @@ dependencies {
     // Dev-only runtime mod (not required for builds or consumers)
     modRuntimeOnly "curse.maven:carpet-349239:7113642"
     modImplementation "curse.maven:modmenu-308702:7444262"
+    modApi("me.shedaniel.cloth:cloth-config-fabric:21.11.153") {
+        exclude(group: "net.fabricmc.fabric-api")
+    }
+    implementation include("io.github.CDAGaming:DiscordIPC:0.10.2")
+    implementation "org.apache.commons:commons-lang3:3.14.0"
 }
 
 processResources {

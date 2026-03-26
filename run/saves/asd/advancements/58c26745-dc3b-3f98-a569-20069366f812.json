@@ -1,0 +1,21 @@
+{
+  "minecraft:recipes/decorations/end_crystal": {
+    "criteria": {
+      "has_ender_eye": "2026-03-25 23:24:55 +0200"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/crafting_table": {
+    "criteria": {
+      "unlock_right_away": "2026-03-25 23:24:55 +0200"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/ender_chest": {
+    "criteria": {
+      "has_ender_eye": "2026-03-25 23:24:55 +0200"
+    },
+    "done": true
+  },
+  "DataVersion": 4556
+}
